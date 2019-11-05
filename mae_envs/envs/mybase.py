@@ -29,7 +29,7 @@ class Base(Env):
             deterministic_mode (bool): if True, seeds are incremented rather than randomly sampled.
     '''
     def __init__(self, horizon=250, n_substeps=5, n_agents=2,
-                 floor_size=4., grid_size=30,
+                 floor_size=2., grid_size=30,
                  action_lims=(-1.0, 1.0), deterministic_mode=False, start_seed=None,
                  **kwargs):
         super().__init__(get_sim=self._get_sim,
@@ -110,7 +110,7 @@ def make_env(n_substeps=5, horizon=250, deterministic_mode=False, n_agents=2,
     env.add_module(Centersquare(grid_size=30, num_rooms=4, min_room_size=6, door_size=2))
 
     if n_boxes > 0:
-        env.add_module(Boxes(n_boxes=n_boxes, box_size=1.8, placement_fn=uniform_placement))
+        env.add_module(Boxes(n_boxes=n_boxes, box_size=1., placement_fn=uniform_placement))
     if n_ramps > 0:
         env.add_module(Ramps(n_ramps=n_ramps))
     #env.add_module(Agents(n_agents))

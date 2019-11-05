@@ -10,9 +10,12 @@ Using:
 Tensorflow: 1.0
 gym: 0.8.0
 """
-
+import functools
 import numpy as np
-import tensorflow as tf
+#import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+import tensorflow_probability as tfp
 
 # reproducible
 np.random.seed(1)
@@ -27,7 +30,9 @@ class PolicyGradient:
             learning_rate=0.01,
             reward_decay=0.95,
             output_graph=False,
+            policy_name= 'p'
     ):
+        self.policy_name= policy_name
         self.n_actions = n_actions
         self.n_features = n_features
         self.lr = learning_rate
@@ -48,43 +53,61 @@ class PolicyGradient:
         self.sess.run(tf.global_variables_initializer())
 
     def _build_net(self):
-        with tf.name_scope('inputs'):
-            self.tf_obs = tf.placeholder(tf.float32, [None, self.n_features], name="observations")
-            self.tf_acts = tf.placeholder(tf.int32, [None, ], name="actions_num")
-            self.tf_vt = tf.placeholder(tf.float32, [None, ], name="actions_value")
+        with tf.name_scope(self.policy_name+'inputs'):
+            self.tf_obs = tf.placeholder(tf.float32, [None, self.n_features], name=self.policy_name+"observations")
+            self.tf_acts = tf.placeholder(tf.int32, [None, ], name=self.policy_name+"actions_num")
+            self.tf_vt = tf.placeholder(tf.float32, [None, ], name=self.policy_name+"actions_value")
         # fc1
-        layer = tf.layers.dense(
-            inputs=self.tf_obs,
-            units=30,
-            activation=tf.nn.tanh,  # tanh activation
-            kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
-            bias_initializer=tf.constant_initializer(0.1),
-            name='fc1'
-        )
-        # fc2
-        all_act = tf.layers.dense(
-            inputs=layer,
-            units=self.n_actions,
-            activation=None,
-            kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
-            bias_initializer=tf.constant_initializer(0.1),
-            name='fc2'
-        )
 
-        self.all_act_prob = tf.nn.softmax(all_act, name='act_prob')  # use softmax to convert to probability
+        def get_all_variables_from_scope(scope):
+            return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope)
 
-        with tf.name_scope('loss'):
+        with tf.variable_scope(self.policy_name + 'lay'):
+            layer = tf.layers.dense(
+                inputs=self.tf_obs,
+                units=30,
+                activation=tf.nn.tanh,  # tanh activation
+                kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.5),
+                bias_initializer=tf.constant_initializer(0.0),
+                name=self.policy_name+'fc1'
+            )
+
+            layer2 = tf.layers.dense(
+                inputs=layer,
+                units=30,
+                activation=tf.nn.tanh,  # tanh activation
+                kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.5),
+                bias_initializer=tf.constant_initializer(0.0),
+                name=self.policy_name+'fc2'
+            )
+            # fc2
+            all_act = tf.layers.dense(
+                inputs=layer2,
+                units=self.n_actions,
+                activation=None,
+                kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.5),
+                bias_initializer=tf.constant_initializer(0.0),
+                name=self.policy_name+'fc3'
+            )
+
+        self.all_act_prob = tf.nn.softmax(all_act, name=self.policy_name+'act_prob')  # use softmax to convert to probability
+
+        with tf.name_scope(self.policy_name+'loss'):
             # to maximize total reward (log_p * R) is to minimize -(log_p * R), and the tf only have minimize(loss)
             neg_log_prob = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=all_act, labels=self.tf_acts)   # this is negative log of chosen action
             # or in this way:
             # neg_log_prob = tf.reduce_sum(-tf.log(self.all_act_prob)*tf.one_hot(self.tf_acts, self.n_actions), axis=1)
             loss = tf.reduce_mean(neg_log_prob * self.tf_vt)  # reward guided loss
 
-        with tf.name_scope('train'):
+        with tf.name_scope(self.policy_name+'train'):
             self.train_op = tf.train.AdamOptimizer(self.lr).minimize(loss)
-
+            #self.train_op=pSGLD(self.lr).minimize(loss)
+            #optimizer_kernel = tfp.optimizer.StochasticGradientLangevinDynamics(learning_rate=self.lr)
+            #self.train_op = optimizer_kernel.minimize(loss, var_list=functools.reduce(lambda a, b: a + b, [layer.trainable_variables() for layer in [layer,layer2,all_act]]))
     def choose_action(self, observation):
+        lam=0.95
         prob_weights = self.sess.run(self.all_act_prob, feed_dict={self.tf_obs: observation[np.newaxis, :]})
+        prob_weights=prob_weights*lam+(1.0-lam)/self.n_actions
         action = np.random.choice(range(prob_weights.shape[1]), p=prob_weights.ravel())  # select action w.r.t the actions prob
         return action
 
@@ -92,6 +115,7 @@ class PolicyGradient:
         self.ep_obs.append(s)
         self.ep_as.append(a)
         self.ep_rs.append(r)
+
 
     def learn(self):
         # discount and normalize episode reward

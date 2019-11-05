@@ -1,124 +1,81 @@
-"""
-This part of code is the reinforcement learning brain, which is a brain of the agent.
-All decisions are made in here.
-
-Policy Gradient, Reinforcement Learning.
-
-View more on my tutorial page: https://morvanzhou.github.io/tutorials/
-
-Using:
-Tensorflow: 1.0
-gym: 0.8.0
-"""
-
+import torch as T
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
 import numpy as np
-import tensorflow as tf
 
-# reproducible
-np.random.seed(1)
-tf.set_random_seed(1)
+#from sgld import SGLD
 
-
-class PolicyGradient2:
-    def __init__(
-            self,
-            n_actions,
-            n_features,
-            learning_rate=0.01,
-            reward_decay=0.95,
-            output_graph=False,
-    ):
+class PolicyNetwork(nn.Module):
+    def __init__(self, ALPHA, input_dims, fc1_dims, fc2_dims,
+                 n_actions):
+        super(PolicyNetwork, self).__init__()
+        self.input_dims = input_dims
+        self.fc1_dims = fc1_dims
+        self.fc2_dims = fc2_dims
         self.n_actions = n_actions
-        self.n_features = n_features
-        self.lr = learning_rate
-        self.gamma = reward_decay
+        self.fc1 = nn.Linear(*self.input_dims, self.fc1_dims)
+        self.fc2 = nn.Linear(self.fc1_dims, self.fc2_dims)
+        self.fc3 = nn.Linear(self.fc2_dims, self.n_actions)
+        #self.optimizer = optim.Adam(self.parameters(), lr=ALPHA)
+        self.optimizer = optim.RMSprop(self.parameters(), lr=ALPHA)
+        #self.optimizer = optim.SGLD(self.parameters(), lr=ALPHA)
+        #self.device = T.device('cuda:0' if T.cuda.is_available() else 'cuda:1')
+        self.device=T.device('cpu:0')
+        self.to(self.device)
 
-        self.ep_obs, self.ep_as, self.ep_rs = [], [], []
+    def forward(self, observation):
+        state = T.Tensor(observation).to(self.device)
+        x = F.relu(self.fc1(state))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
 
-        self._build_net()
-
-        self.sess = tf.Session()
-
-        if output_graph:
-            # $ tensorboard --logdir=logs
-            # http://0.0.0.0:6006/
-            # tf.train.SummaryWriter soon be deprecated, use following
-            tf.summary.FileWriter("logs/", self.sess.graph)
-
-        self.sess.run(tf.global_variables_initializer())
-
-    def _build_net(self):
-        with tf.name_scope('inputs'):
-            self.tf_obs = tf.placeholder(tf.float32, [None, self.n_features], name="observations")
-            self.tf_acts = tf.placeholder(tf.int32, [None, ], name="actions_num")
-            self.tf_vt = tf.placeholder(tf.float32, [None, ], name="actions_value")
-        # fc1
-        layer = tf.layers.dense(
-            inputs=self.tf_obs,
-            units=30,
-            activation=tf.nn.tanh,  # tanh activation
-            kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
-            bias_initializer=tf.constant_initializer(0.1),
-            name='fc1'
-        )
-        # fc2
-        all_act = tf.layers.dense(
-            inputs=layer,
-            units=self.n_actions,
-            activation=None,
-            kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
-            bias_initializer=tf.constant_initializer(0.1),
-            name='fc2'
-        )
-
-        self.all_act_prob = tf.nn.softmax(all_act, name='act_prob')  # use softmax to convert to probability
-
-        with tf.name_scope('loss'):
-            # to maximize total reward (log_p * R) is to minimize -(log_p * R), and the tf only have minimize(loss)
-            neg_log_prob = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=all_act, labels=self.tf_acts)   # this is negative log of chosen action
-            # or in this way:
-            # neg_log_prob = tf.reduce_sum(-tf.log(self.all_act_prob)*tf.one_hot(self.tf_acts, self.n_actions), axis=1)
-            loss = tf.reduce_mean(neg_log_prob * self.tf_vt)  # reward guided loss
-
-        with tf.name_scope('train'):
-            self.train_op = tf.train.AdamOptimizer(self.lr).minimize(loss)
+class PolicyGradientAgent(object):
+    def __init__(self, ALPHA, input_dims, GAMMA=0.99, n_actions=4,
+                 layer1_size=256, layer2_size=256):
+        self.gamma = GAMMA
+        self.reward_memory = []
+        self.action_memory = []
+        self.policy = PolicyNetwork(ALPHA, input_dims, layer1_size, layer2_size,
+                                    n_actions)
 
     def choose_action(self, observation):
-        prob_weights = self.sess.run(self.all_act_prob, feed_dict={self.tf_obs: observation[np.newaxis, :]})
-        action = np.random.choice(range(prob_weights.shape[1]), p=prob_weights.ravel())  # select action w.r.t the actions prob
-        return action
+        probabilities = F.softmax(self.policy.forward(observation), dim=0)
+        action_probs = T.distributions.Categorical(probabilities)
+        action = action_probs.sample()
+        log_probs = action_probs.log_prob(action)
+        self.action_memory.append(log_probs)
 
-    def store_transition(self, s, a, r):
-        self.ep_obs.append(s)
-        self.ep_as.append(a)
-        self.ep_rs.append(r)
+        return action.item()
+
+    def store_rewards(self,reward):
+        self.reward_memory.append(reward)
+
 
     def learn(self):
-        # discount and normalize episode reward
-        discounted_ep_rs_norm = self._discount_and_norm_rewards()
+        self.policy.optimizer.zero_grad()
+        # Assumes only a single episode for reward_memory
+        G = np.zeros_like(self.reward_memory, dtype=np.float64)
+        for t in range(len(self.reward_memory)):
+            G_sum = 0
+            discount = 1
+            for k in range(t, len(self.reward_memory)):
+                G_sum += self.reward_memory[k] * discount
+                discount *= self.gamma
+            G[t] = G_sum
+        mean = np.mean(G)
+        std = np.std(G) if np.std(G) > 0 else 1
+        G = (G - mean) / std
 
-        # train on episode
-        self.sess.run(self.train_op, feed_dict={
-             self.tf_obs: np.vstack(self.ep_obs),  # shape=[None, n_obs]
-             self.tf_acts: np.array(self.ep_as),  # shape=[None, ]
-             self.tf_vt: discounted_ep_rs_norm,  # shape=[None, ]
-        })
+        G = T.tensor(G, dtype=T.float).to(self.policy.device)
 
-        self.ep_obs, self.ep_as, self.ep_rs = [], [], []    # empty episode data
-        return discounted_ep_rs_norm
+        loss = 0
+        for g, logprob in zip(G, self.action_memory):
+            loss += -g * logprob
 
-    def _discount_and_norm_rewards(self):
-        # discount episode rewards
-        discounted_ep_rs = np.zeros_like(self.ep_rs)
-        running_add = 0
-        for t in reversed(range(0, len(self.ep_rs))):
-            running_add = running_add * self.gamma + self.ep_rs[t]
-            discounted_ep_rs[t] = running_add
+        loss.backward()
+        self.policy.optimizer.step()
 
-        # normalize episode rewards
-        discounted_ep_rs -= np.mean(discounted_ep_rs)
-        discounted_ep_rs /= np.std(discounted_ep_rs)
-        return discounted_ep_rs
-
-
-
+        self.action_memory = []
+        self.reward_memory = []
