@@ -23,7 +23,7 @@ from RL_brain_2 import PolicyGradient
 from RL_brain_3 import PolicyGradientAgent
 import matplotlib.pyplot as plt
 
-def edge_punish(x,y,l=0.2,p=3.53,w=0):
+def edge_punish(x,y,l=0.2,p=3.53,w=1.0):
     xx=0.0
     if (np.abs(x-0)<l) | (np.abs(x-p)<l):
         xx = xx + 1.0
@@ -67,8 +67,8 @@ display = True
 n_agents= 2
 n_seekers=1
 n_hiders=1
-episode=350
-n_episode=800
+episode=400
+n_episode=500
 kwargs.update({
     'n_agents': n_agents,
     'n_seekers': n_seekers,
@@ -122,9 +122,9 @@ def main(sk=None,hd=None, output='output',speed=1,vlag=0):
     )
     '''
     if vlag == 0:
-        Seeker=PolicyGradientAgent(0.001,[8],n_actions=25,layer1_size=64,layer2_size=32)
+        Seeker=PolicyGradientAgent(0.01,[8],n_actions=9,layer1_size=32,layer2_size=32)
 
-        Hider = PolicyGradientAgent(0.001, [8], n_actions=25, layer1_size=64, layer2_size=32)
+        Hider = PolicyGradientAgent(0.01, [8], n_actions=9, layer1_size=32, layer2_size=32)
     else:
         Seeker=sk
         Hider=hd
@@ -146,16 +146,12 @@ def main(sk=None,hd=None, output='output',speed=1,vlag=0):
 
             if np.random.rand()>0.95:
                 action_Hider=np.random.randint(9)
-            h1=(action_Hider//5-2)*1+5
-            h2 = (action_Hider%5 - 2) * 1 + 5
+            h1=action_Hider//3+4
+            h2=action_Hider%3+4
             #h1,h2=5,5
             #print(action)
-
-            if np.random.rand()>0.95:
-                action_Seeker=np.random.randint(9)
-
-            s1=(action_Seeker//5-2)*speed+5
-            s2=(action_Seeker%5-2)*speed+5
+            s1=(action_Seeker//3-1)*speed+5
+            s2=(action_Seeker%3-1)*speed+5
 
 
 
@@ -167,18 +163,18 @@ def main(sk=None,hd=None, output='output',speed=1,vlag=0):
             observation_ = np.array([obs_['observation_self'][0][0], obs_['observation_self'][0][1],obs_['observation_self'][0][4], obs_['observation_self'][0][5],obs_['observation_self'][1][0], obs_['observation_self'][1][1], obs_['observation_self'][1][4], obs_['observation_self'][1][5]])
 
 
-           # if not obs_['mask_aa_obs'][1][0]:
-            #    rew= 5.0-( np.sqrt((observation_[4] - observation_[0]) ** 2 + (observation_[5] - observation_[1]) ** 2)*5)
-            #else:
-            #    rew= 5.0-( np.sqrt((observation_[4] - observation_[0]) ** 2 + (observation_[5] - observation_[1]) ** 2)*5)
-            rew=1.0/np.sqrt((observation_[4] - observation_[0]) ** 2 + (observation_[5] - observation_[1]) ** 2)*5-3
+            if not obs_['mask_aa_obs'][1][0]:
+                rew= 5-( np.sqrt((observation_[4] - observation_[0]) ** 2 + (observation_[5] - observation_[1]) ** 2)*5)
+            else:
+                rew= 5-( np.sqrt((observation_[4] - observation_[0]) ** 2 + (observation_[5] - observation_[1]) ** 2)*5)
             #print(observation_)
 
             #rrew=3-edge_punish(observation_[0],observation_[1])
             #print(observation_[0],observation_[1])
             #Seeker.store_transition(observation[-4:], action_Seeker, +rew)
-            Seeker.store_rewards(rew-edge_punish(observation_[4],observation_[5]))
-            Hider.store_rewards(-rew-edge_punish(observation_[0],observation_[1]))
+            if vlag == 0:
+                Seeker.store_rewards(rew-edge_punish(observation_[4],observation_[5]))
+                Hider.store_rewards(-rew-edge_punish(observation_[0],observation_[1]))
             #print(-rrew)
             #Hider.store_transition(observation[4:], action_Hider, rrew)
 
@@ -187,20 +183,12 @@ def main(sk=None,hd=None, output='output',speed=1,vlag=0):
         print(ii)
 
 
-
-        if ii>(n_episode-201):
-            #a.append(Hider.ep_rs)
-            a.append(Hider.reward_memory)
-
-        if vlag == 0:
+        if vlag ==0:
             Hider.learn()
             Seeker.learn()
-        else:
-            Seeker.reward_memory=[]
-            Seeker.action_memory = []
-            Hider.reward_memory = []
-            Hider.action_memory = []
-
+        if ii>(n_episode-51):
+            #a.append(Hider.ep_rs)
+            a.append(Seeker.reward_memory)
 
 
 
@@ -222,16 +210,17 @@ def main(sk=None,hd=None, output='output',speed=1,vlag=0):
     return Seeker,Hider
 
 if __name__ == '__main__':
-    S1,H1=main(output='11', speed=2)
-    S2,H2 = main(output='12', speed=1)
     import pickle
-    pickle_file = open('objS2.pkl', 'wb')
-    pickle.dump(S2, pickle_file)
+
+    pickle_file = open('objS2.pkl', 'rb')
+
+    S2=pickle.load(pickle_file)
     pickle_file.close()
 
-    pickle_file = open('objH2.pkl', 'wb')
-    pickle.dump(H2, pickle_file)
-    pickle_file.close()
-    main(sk=S2,hd=H1,output='13', speed=1,vlag=1)
+    pickle_file = open('objH2.pkl', 'rb')
 
-    #test()
+    H2=pickle.load(pickle_file)
+    pickle_file.close()
+
+    S2,H2 = main(sk=S2,hd=H2,output='2', speed=1,vlag=1)
+
