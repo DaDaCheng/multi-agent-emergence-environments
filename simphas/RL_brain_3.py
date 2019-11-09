@@ -4,6 +4,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 
+#
+
 #from sgld import SGLD
 
 class PolicyNetwork(nn.Module):
@@ -23,10 +25,13 @@ class PolicyNetwork(nn.Module):
             self.optimizer = optim.RMSprop(self.parameters(), lr=ALPHA)
         else:
             self.optimizer = optim.Adam(self.parameters(), lr=ALPHA)
-        self.optimizer = optim.SGLD(self.parameters(), lr=ALPHA)
         #self.device = T.device('cuda:0' if T.cuda.is_available() else 'cuda:1')
         self.device=T.device('cpu:0')
         self.to(self.device)
+
+        #for name, param in self.fc1.named_parameters():
+            #print(name,param)
+        #input()
 
     def forward(self, observation):
         state = T.Tensor(observation).to(self.device)
@@ -37,7 +42,8 @@ class PolicyNetwork(nn.Module):
 
 class PolicyGradientAgent(object):
     def __init__(self, ALPHA, input_dims, GAMMA=0.99, n_actions=4,
-                 layer1_size=256, layer2_size=256,opt=None):
+                 layer1_size=256, layer2_size=256,opt=None,seed=1):
+        T.manual_seed(seed)
         self.gamma = GAMMA
         self.reward_memory = []
         self.action_memory = []

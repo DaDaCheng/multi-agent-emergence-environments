@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 import logging
-import click
+#import click
 import numpy as np
+import argparse
 from os.path import abspath, dirname, join
 from gym.spaces import Tuple
 from mujoco_py import const, MjViewer
@@ -22,8 +23,22 @@ from gym.spaces import Box, MultiDiscrete, Discrete
 # from RL_brain_2 import PolicyGradient
 from RL_brain_3 import PolicyGradientAgent
 
-
 # import matplotlib.pyplot as plt
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--learning_rate', type=float, default=1e-4, help='learning rate')
+parser.add_argument('--episode', type=int, default=350)
+parser.add_argument('--n_episode', type=int, default=10000)
+parser.add_argument('--opt', default='SGLD')
+parser.add_argument('--n_hiders', type=int, default=1)
+parser.add_argument('--n_seekers', type=int, default=1)
+parser.add_argument('--n_agents', type=int, default=2)
+parser.add_argument('--seeds', type=int, default=1)
+parser.add_argument('--out', default='output')
+parser.add_argument('--speed', type=int, default=1)
+args = parser.parse_args()
+
 
 def edge_punish(x, y, l=0.2, p=3.53, w=0):
     xx = 0.0
@@ -64,15 +79,21 @@ def game_rew(n,n_seekers, dism, matm, thr=1.0):
 
 
 
-kwargs = {}
 env_name = 'mae_envs/envs/mybase.py'
 
 display = True
-n_agents= 2
-n_seekers=1
-n_hiders=1
-episode=350
-n_episode=1000
+n_agents= args.n_agents
+n_seekers=args.n_seekers
+n_hiders=args.n_hiders
+episode=args.episode
+n_episode=args.n_episode
+kwargs = {}
+seed=args.seeds
+opt=args.opt
+lr=args.learning_rate
+out=args.out
+speed=args.speed
+
 kwargs.update({
     'n_agents': n_agents,
     'n_seekers': n_seekers,
@@ -82,6 +103,9 @@ kwargs.update({
     #'n_substeps' : 1
 
 })
+
+
+
 
 module = run_path(env_name)
 make_env = module["make_env"]
@@ -94,7 +118,7 @@ env.reset()
 rhlist=[]
 rslist=[]
 
-def main(sk=None,hd=None, output='output',speed=1,vlag=0):
+def main(sk=None,hd=None,vlag=0):
 
     '''
     RL = mpolicy(
@@ -127,13 +151,12 @@ def main(sk=None,hd=None, output='output',speed=1,vlag=0):
     )
     '''
     if vlag == 0:
-        Seeker = PolicyGradientAgent(0.001, [8], n_actions=9, layer1_size=20, layer2_size=10,opt='SGLD')
+        Seeker = PolicyGradientAgent(lr, [8], n_actions=9, layer1_size=20, layer2_size=10,opt=opt,seed=seed)
 
-        Hider = PolicyGradientAgent(0.001, [8], n_actions=9, layer1_size=20, layer2_size=10,opt='SGLD')
+        Hider = PolicyGradientAgent(lr, [8], n_actions=9, layer1_size=20, layer2_size=10,opt=opt,seed=seed+12345)
     else:
         Seeker = sk
         Hider = hd
-    a = []
     rs = []
     rh = []
     for ii in range(n_episode):
@@ -172,6 +195,7 @@ def main(sk=None,hd=None, output='output',speed=1,vlag=0):
 
 
 
+
             ac = {'action_movement': np.array([[h1, h2, 5], [s1, s2, 5]])}
             #print(ac)
             #obs_, reward, done, info = env_viewer.step(ac, show=False)
@@ -200,11 +224,6 @@ def main(sk=None,hd=None, output='output',speed=1,vlag=0):
         #print(np.mean(Seeker.reward_memory[0]))
         rs.append(np.mean(Seeker.reward_memory))
         rh.append(np.mean(Hider.reward_memory))
-        if ii>(n_episode-201):
-            #a.append(Hider.ep_rs)
-            a.append(Seeker.reward_memory)
-
-
         if vlag == 0:
             Hider.learn()
             Seeker.learn()
@@ -215,11 +234,11 @@ def main(sk=None,hd=None, output='output',speed=1,vlag=0):
             Hider.action_memory = []
 
 
-    np.save(output + '.npy', a)
-    rhlist.append(rh)
-    rslist.append(rs)
-    # np.save('SGLDS'+output + '.npy', rs)
-    # np.save('RMS' + output + '.npy', rh)
+    #np.save('~/Downloads/'+out+'.npy', a)
+    #rhlist.append(rh)
+    #rslist.append(rs)
+    np.save('output/'+opt+'_h_'+out + '.npy', rh)
+    np.save('output/'+opt+'_s_'+out + '.npy', rs)
     # print(ii,R)
     return Seeker, Hider
 
@@ -228,7 +247,7 @@ if __name__ == '__main__':
     # S3, H3 = main(output='3', speed=3)
     # S4, H4 = main(output='4', speed=4)
     # S1, H1 = main(output='1', speed=1)
-    S1, H1 = main(output='1', speed=4)
+    S1, H1 = main()
     # import pickle
     # pickle_file = open('objS2.pkl', 'wb')
     # pickle.dump(S2, pickle_file)
@@ -243,5 +262,5 @@ if __name__ == '__main__':
     # main(sk=S1, hd=H2, output='21', speed=1, vlag=1)
     # test()
 
-    np.save('SGLDS.npy', rslist)
-    np.save('SGLDH.npy', rhlist)
+    #np.save('SGLDS.npy', rslist)
+    #np.save('SGLDH.npy', rhlist)
