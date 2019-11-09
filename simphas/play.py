@@ -19,7 +19,7 @@ from gym.spaces import Box, MultiDiscrete, Discrete
 #from simphas.MRL import mpolicy
 
 #import gym
-from RL_brain_2 import PolicyGradient
+#from RL_brain_2 import PolicyGradient
 from RL_brain_3 import PolicyGradientAgent
 import matplotlib.pyplot as plt
 
@@ -68,7 +68,7 @@ n_agents= 2
 n_seekers=1
 n_hiders=1
 episode=350
-n_episode=800
+n_episode=10000
 kwargs.update({
     'n_agents': n_agents,
     'n_seekers': n_seekers,
@@ -87,7 +87,8 @@ env.reset()
 env_viewer = EnvViewer(env)
 
 
-
+rhlist=[]
+rslist=[]
 
 def main(sk=None,hd=None, output='output',speed=1,vlag=0):
 
@@ -122,13 +123,15 @@ def main(sk=None,hd=None, output='output',speed=1,vlag=0):
     )
     '''
     if vlag == 0:
-        Seeker=PolicyGradientAgent(0.001,[8],n_actions=25,layer1_size=64,layer2_size=32)
+        Seeker=PolicyGradientAgent(0.001,[8],n_actions=9,layer1_size=20,layer2_size=10)
 
-        Hider = PolicyGradientAgent(0.001, [8], n_actions=25, layer1_size=64, layer2_size=32)
+        Hider = PolicyGradientAgent(0.001, [8], n_actions=9, layer1_size=20, layer2_size=10)
     else:
         Seeker=sk
         Hider=hd
     a=[]
+    rs=[]
+    rh=[]
     for ii in range(n_episode):
         env_viewer.env_reset()
         sampleaction = np.array([[5, 5, 5], [5, 5, 5]])
@@ -146,16 +149,16 @@ def main(sk=None,hd=None, output='output',speed=1,vlag=0):
 
             if np.random.rand()>0.95:
                 action_Hider=np.random.randint(9)
-            h1=(action_Hider//5-2)*1+5
-            h2 = (action_Hider%5 - 2) * 1 + 5
+            h1=(action_Hider//3-1)*1+5
+            h2 = (action_Hider%3 - 1) * 1 + 5
             #h1,h2=5,5
             #print(action)
 
             if np.random.rand()>0.95:
                 action_Seeker=np.random.randint(9)
 
-            s1=(action_Seeker//5-2)*speed+5
-            s2=(action_Seeker%5-2)*speed+5
+            s1=(action_Seeker//3-1)*speed+5
+            s2=(action_Seeker%3-1)*speed+5
 
 
 
@@ -163,7 +166,7 @@ def main(sk=None,hd=None, output='output',speed=1,vlag=0):
 
             ac = {'action_movement': np.array([[h1, h2, 5], [s1, s2, 5]])}
             #print(ac)
-            obs_, reward, done, info = env_viewer.step(ac, show=True)
+            obs_, reward, done, info = env_viewer.step(ac, show=False)
             observation_ = np.array([obs_['observation_self'][0][0], obs_['observation_self'][0][1],obs_['observation_self'][0][4], obs_['observation_self'][0][5],obs_['observation_self'][1][0], obs_['observation_self'][1][1], obs_['observation_self'][1][4], obs_['observation_self'][1][5]])
 
 
@@ -185,12 +188,13 @@ def main(sk=None,hd=None, output='output',speed=1,vlag=0):
             #print(50-edge_punish(observation_[0],observation_[1]))
             observation = observation_
         print(ii)
-
-
-
+        #print(np.mean(Seeker.reward_memory[0]))
+        rs.append(np.mean(Seeker.reward_memory))
+        rh.append(np.mean(Hider.reward_memory))
         if ii>(n_episode-201):
             #a.append(Hider.ep_rs)
-            a.append(Hider.reward_memory)
+            a.append(Seeker.reward_memory)
+
 
         if vlag == 0:
             Hider.learn()
@@ -217,21 +221,35 @@ def main(sk=None,hd=None, output='output',speed=1,vlag=0):
 
 
 
-        np.save(output+'.npy', a)
-        #print(ii,R)
+    np.save(output+'.npy', a)
+    rhlist.append(rh)
+    rslist.append(rs)
+    #np.save('SGLDS'+output + '.npy', rs)
+    #np.save('RMS' + output + '.npy', rh)
+    #print(ii,R)
     return Seeker,Hider
 
 if __name__ == '__main__':
-    S1,H1=main(output='11', speed=2)
-    S2,H2 = main(output='12', speed=1)
-    import pickle
-    pickle_file = open('objS2.pkl', 'wb')
-    pickle.dump(S2, pickle_file)
-    pickle_file.close()
+    #S2, H2 = main(output='2', speed=2)
+    #S3, H3 = main(output='3', speed=3)
+    #S4, H4 = main(output='4', speed=4)
+    #S1, H1 = main(output='1', speed=1)
+    S1, H1 = main(output='1', speed=4)
+    #import pickle
+    #pickle_file = open('objS2.pkl', 'wb')
+    #pickle.dump(S2, pickle_file)
+    #pickle_file.close()
 
-    pickle_file = open('objH2.pkl', 'wb')
-    pickle.dump(H2, pickle_file)
-    pickle_file.close()
-    main(sk=S2,hd=H1,output='13', speed=1,vlag=1)
+    #pickle_file = open('objH2.pkl', 'wb')
+    #pickle.dump(H2, pickle_file)
+    #pickle_file.close()
 
+
+
+    #main(sk=S1, hd=H4, output='41', speed=1, vlag=1)
+    #main(sk=S1, hd=H3, output='31', speed=1, vlag=1)
+    #main(sk=S1, hd=H2, output='21', speed=1, vlag=1)
     #test()
+
+    np.save('SGLDS.npy', rslist)
+    np.save('SGLDH.npy', rhlist)

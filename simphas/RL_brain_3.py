@@ -69,7 +69,6 @@ class PolicyGradientAgent(object):
         G = (G - mean) / std
 
         G = T.tensor(G, dtype=T.float).to(self.policy.device)
-
         loss = 0
         for g, logprob in zip(G, self.action_memory):
             loss += -g * logprob
