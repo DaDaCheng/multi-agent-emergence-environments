@@ -8,7 +8,7 @@ import numpy as np
 
 class PolicyNetwork(nn.Module):
     def __init__(self, ALPHA, input_dims, fc1_dims, fc2_dims,
-                 n_actions):
+                 n_actions, opt):
         super(PolicyNetwork, self).__init__()
         self.input_dims = input_dims
         self.fc1_dims = fc1_dims
@@ -17,8 +17,12 @@ class PolicyNetwork(nn.Module):
         self.fc1 = nn.Linear(*self.input_dims, self.fc1_dims)
         self.fc2 = nn.Linear(self.fc1_dims, self.fc2_dims)
         self.fc3 = nn.Linear(self.fc2_dims, self.n_actions)
-        #self.optimizer = optim.Adam(self.parameters(), lr=ALPHA)
-        #self.optimizer = optim.RMSprop(self.parameters(), lr=ALPHA)
+        if opt=='SGLD':
+            self.optimizer = optim.SGLD(self.parameters(), lr=ALPHA)
+        elif opt=='RMSprop':
+            self.optimizer = optim.RMSprop(self.parameters(), lr=ALPHA)
+        else:
+            self.optimizer = optim.Adam(self.parameters(), lr=ALPHA)
         self.optimizer = optim.SGLD(self.parameters(), lr=ALPHA)
         #self.device = T.device('cuda:0' if T.cuda.is_available() else 'cuda:1')
         self.device=T.device('cpu:0')
@@ -33,12 +37,12 @@ class PolicyNetwork(nn.Module):
 
 class PolicyGradientAgent(object):
     def __init__(self, ALPHA, input_dims, GAMMA=0.99, n_actions=4,
-                 layer1_size=256, layer2_size=256):
+                 layer1_size=256, layer2_size=256,opt=None):
         self.gamma = GAMMA
         self.reward_memory = []
         self.action_memory = []
         self.policy = PolicyNetwork(ALPHA, input_dims, layer1_size, layer2_size,
-                                    n_actions)
+                                    n_actions,opt)
 
     def choose_action(self, observation):
         probabilities = F.softmax(self.policy.forward(observation), dim=0)
