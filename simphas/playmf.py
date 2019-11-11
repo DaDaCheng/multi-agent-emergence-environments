@@ -3,6 +3,7 @@ import logging
 #import click
 import numpy as np
 import argparse
+import pickle
 from os.path import abspath, dirname, join
 from gym.spaces import Tuple
 from mujoco_py import const, MjViewer
@@ -27,16 +28,20 @@ from RL_brain_3 import PolicyGradientAgent
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--learning_rate', type=float, default=1e-4, help='learning rate')
+parser.add_argument('--learning_rate', type=float, default=1e-3, help='learning rate')
 parser.add_argument('--episode', type=int, default=350)
-parser.add_argument('--n_episode', type=int, default=10000)
+parser.add_argument('--n_episode', type=int, default=1000)
 parser.add_argument('--opt', default='SGLD')
 parser.add_argument('--n_hiders', type=int, default=1)
 parser.add_argument('--n_seekers', type=int, default=1)
 parser.add_argument('--n_agents', type=int, default=2)
 parser.add_argument('--seeds', type=int, default=1)
 parser.add_argument('--out', default='output')
-parser.add_argument('--speed', type=int, default=1)
+parser.add_argument('--s_speed', type=int, default=1)
+parser.add_argument('--h_speed', type=int, default=1)
+parser.add_argument('--fileseeker', default='policy.pkl')
+parser.add_argument('--filehider', default='policy.pkl')
+parser.add_argument('--vlag',type=int, default=0)
 args = parser.parse_args()
 
 
@@ -92,7 +97,11 @@ seed=args.seeds
 opt=args.opt
 lr=args.learning_rate
 out=args.out
-speed=args.speed
+s_speed=args.s_speed
+h_speed=args.h_speed
+sfile=args.fileseeker
+hfile=args.filehider
+vlag=args.vlag
 
 kwargs.update({
     'n_agents': n_agents,
@@ -120,43 +129,14 @@ rslist=[]
 
 def main(sk=None,hd=None,vlag=0):
 
-    '''
-    RL = mpolicy(
-        n_actions=9,
-        n_features=8,
-        #n_features=4,
-        learning_rate=0.01,
-        reward_decay=0.9,
-        units=30
-        # output_graph=True,
-    )
-    '''
-    '''
-    Hider = PolicyGradient(
-        n_actions=9,
-        n_features=4,
-        learning_rate=0.01,
-        reward_decay=0.99,
-        policy_name=Hpolicy_name
-        # output_graph=True,
-    )
+    Seeker=sk
+    Hider=hd
 
-    Seeker = PolicyGradient(
-        n_actions=9,
-        n_features=4,
-        learning_rate=0.01,
-        reward_decay=0.99,
-        policy_name=Spolicy_name
-        # output_graph=True,
-    )
-    '''
-    if vlag == 0:
+    if Seeker == None:
         Seeker = PolicyGradientAgent(lr, [8], n_actions=9, layer1_size=20, layer2_size=10,opt=opt,seed=seed)
-
+    if Hider == None:
         Hider = PolicyGradientAgent(lr, [8], n_actions=9, layer1_size=20, layer2_size=10,opt=opt,seed=seed+12345)
-    else:
-        Seeker = sk
-        Hider = hd
+
     rs = []
     rh = []
     for ii in range(n_episode):
@@ -180,16 +160,16 @@ def main(sk=None,hd=None,vlag=0):
 
             if np.random.rand() > 0.95:
                 action_Hider = np.random.randint(9)
-            h1 = (action_Hider // 3 - 1) * 1 + 5
-            h2 = (action_Hider % 3 - 1) * 1 + 5
+            h1 = (action_Hider // 3 - 1) * h_speed + 5
+            h2 = (action_Hider % 3 - 1) * h_speed + 5
             #h1,h2=5,5
             #print(action)
 
             if np.random.rand()>0.95:
                 action_Seeker=np.random.randint(9)
 
-            s1=(action_Seeker//3-1)*speed+5
-            s2=(action_Seeker%3-1)*speed+5
+            s1=(action_Seeker//3-1)*s_speed+5
+            s2=(action_Seeker%3-1)*s_speed+5
 
 
 
@@ -222,8 +202,10 @@ def main(sk=None,hd=None,vlag=0):
             observation = observation_
         print(ii)
         #print(np.mean(Seeker.reward_memory[0]))
-        rs.append(np.mean(Seeker.reward_memory))
-        rh.append(np.mean(Hider.reward_memory))
+        #rs.append(np.mean(Seeker.reward_memory))
+        #rh.append(np.mean(Hider.reward_memory))
+        rhlist.append(Hider.reward_memory)
+        rslist.append(Seeker.reward_memory)
         if vlag == 0:
             Hider.learn()
             Seeker.learn()
@@ -237,8 +219,8 @@ def main(sk=None,hd=None,vlag=0):
     #np.save('~/Downloads/'+out+'.npy', a)
     #rhlist.append(rh)
     #rslist.append(rs)
-    np.save('output/'+opt+'_h_'+out + '.npy', rh)
-    np.save('output/'+opt+'_s_'+out + '.npy', rs)
+    np.save('output/'+opt+'_h_'+out + '.npy', rhlist)
+    np.save('output/'+opt+'_s_'+out + '.npy', rslist)
     # print(ii,R)
     return Seeker, Hider
 
@@ -247,20 +229,34 @@ if __name__ == '__main__':
     # S3, H3 = main(output='3', speed=3)
     # S4, H4 = main(output='4', speed=4)
     # S1, H1 = main(output='1', speed=1)
-    S1, H1 = main()
-    # import pickle
-    # pickle_file = open('objS2.pkl', 'wb')
-    # pickle.dump(S2, pickle_file)
-    # pickle_file.close()
 
-    # pickle_file = open('objH2.pkl', 'wb')
-    # pickle.dump(H2, pickle_file)
-    # pickle_file.close()
+    if vlag==0:
+        sk=None
+        hd=None
+    elif vlag==1:
+        sk=None
+        hd=pickle.load(hfile)
+    elif vlag==2:
+        sk = pickle.load(hfile)
+        hd = None
+    else:
 
-    # main(sk=S1, hd=H4, output='41', speed=1, vlag=1)
-    # main(sk=S1, hd=H3, output='31', speed=1, vlag=1)
-    # main(sk=S1, hd=H2, output='21', speed=1, vlag=1)
-    # test()
+        with open(hfile, 'rb') as f:
+            hd=pickle.loads(f.read())
 
-    #np.save('SGLDS.npy', rslist)
-    #np.save('SGLDH.npy', rhlist)
+
+        with open(sfile, 'rb') as f:
+            sk=pickle.loads(f.read())
+
+
+
+    S1, H1 = main(sk,hd)
+
+    pickle_file = open('policys_'+out+'.pkl', 'wb')
+    pickle.dump(S1, pickle_file)
+    pickle_file.close()
+
+    pickle_file = open('policyh_' + out + '.pkl', 'wb')
+    pickle.dump(H1, pickle_file)
+    pickle_file.close()
+

@@ -10,7 +10,7 @@ import numpy as np
 
 class PolicyNetwork(nn.Module):
     def __init__(self, ALPHA, input_dims, fc1_dims, fc2_dims,
-                 n_actions, opt):
+                 n_actions, opt='Adam'):
         super(PolicyNetwork, self).__init__()
         self.input_dims = input_dims
         self.fc1_dims = fc1_dims
@@ -25,6 +25,8 @@ class PolicyNetwork(nn.Module):
             self.optimizer = optim.RMSprop(self.parameters(), lr=ALPHA)
         else:
             self.optimizer = optim.Adam(self.parameters(), lr=ALPHA)
+
+        print(opt)
         #self.device = T.device('cuda:0' if T.cuda.is_available() else 'cuda:1')
         self.device=T.device('cpu:0')
         self.to(self.device)
