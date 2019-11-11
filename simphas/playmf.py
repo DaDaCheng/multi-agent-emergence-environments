@@ -251,12 +251,12 @@ if __name__ == '__main__':
 
 
     S1, H1 = main(sk,hd)
+    if vlag==0:
+        pickle_file = open('policys_'+out+'.pkl', 'wb')
+        pickle.dump(S1, pickle_file)
+        pickle_file.close()
 
-    pickle_file = open('policys_'+out+'.pkl', 'wb')
-    pickle.dump(S1, pickle_file)
-    pickle_file.close()
-
-    pickle_file = open('policyh_' + out + '.pkl', 'wb')
-    pickle.dump(H1, pickle_file)
-    pickle_file.close()
+        pickle_file = open('policyh_' + out + '.pkl', 'wb')
+        pickle.dump(H1, pickle_file)
+        pickle_file.close()
 
