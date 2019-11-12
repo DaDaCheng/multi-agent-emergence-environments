@@ -135,7 +135,7 @@ class EnvViewer(MjViewer):
             if once:
                 return
 
-    def step(self, action, show=False):
+    def step(self, action, show=True):
         obs, rew, done, env_info = self.env.step(action)
         if show:
             self.render()

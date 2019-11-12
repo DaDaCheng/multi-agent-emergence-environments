@@ -28,8 +28,8 @@ from RL_brain_3 import PolicyGradientAgent
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--learning_rate', type=float, default=2e-2, help='learning rate')
-parser.add_argument('--GAMMA', type=float, default=0.9999,)
+parser.add_argument('--learning_rate', type=float, default=1e-2, help='learning rate')
+parser.add_argument('--GAMMA', type=float, default=0.99,)
 parser.add_argument('--episode', type=int, default=350)
 parser.add_argument('--n_episode', type=int, default=1000)
 parser.add_argument('--opt', default='SGLD')
@@ -56,7 +56,7 @@ def edge_punish(x, y, l=0.2, p=3.53, w=0):
 
     return w * xx * 1.0
 
-
+'''multiple setting
 def matdis(n, obs_x):
     dism = np.zeros((n, n))
     for i in range(n):
@@ -82,7 +82,7 @@ def matmas(n, mas):
 def game_rew(n,n_seekers, dism, matm, thr=1.0):
     return np.sum( (np.sum ( ((dism < np.ones((n,n))*thr) & (matm))[-n_seekers:], axis=0)>0))
 
-
+'''
 
 
 env_name = 'mae_envs/envs/mybase.py'
@@ -123,7 +123,9 @@ make_env = module["make_env"]
 args_to_pass, args_remaining = extract_matching_arguments(make_env, kwargs)
 env = make_env(**args_to_pass)
 env.reset()
-#env_viewer = EnvViewer(env)
+if display:
+    env = EnvViewer(env)
+    env.env_reset()
 
 
 
@@ -135,12 +137,15 @@ def main(sk=None,hd=None,vlag=0):
     Hider=hd
 
     if Seeker == None:
-        Seeker = PolicyGradientAgent(lr, [8], n_actions=9, layer1_size=20, layer2_size=10,opt=opt,seed=seed,GAMMA=GAMMA)
+        Seeker = PolicyGradientAgent(lr, [8], n_actions=9, layer1_size=64, layer2_size=32,opt=opt,seed=seed,GAMMA=GAMMA)
     if Hider == None:
-        Hider = PolicyGradientAgent(lr, [8], n_actions=9, layer1_size=20, layer2_size=10,opt=opt,seed=seed+12345, GAMMA=GAMMA)
+        Hider = PolicyGradientAgent(lr, [8], n_actions=9, layer1_size=64, layer2_size=32,opt=opt,seed=seed+12345, GAMMA=GAMMA)
 
     for ii in range(n_episode):
-        env.reset()
+        if display:
+            env.env_reset()
+        else:
+            env.reset()
         sampleaction = np.array([[5, 5, 5], [5, 5, 5]])
         action = {'action_movement': sampleaction}
 
@@ -161,7 +166,6 @@ def main(sk=None,hd=None,vlag=0):
 
             if np.random.rand()>0.95:
                 action_Seeker=np.random.randint(9)
-
             s1=(action_Seeker//3-1)*s_speed+5
             s2=(action_Seeker%3-1)*s_speed+5
 

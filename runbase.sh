@@ -7,7 +7,7 @@ do
   do
     for k in {1..25}
     do
-      sbatch ./basepolicy.sh $i $i $j $k base$i$j$k
+        sbatch ./basepolicy.sh $i $i $j $k base$i$j$k
 
     done
   done
