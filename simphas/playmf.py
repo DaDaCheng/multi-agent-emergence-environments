@@ -28,7 +28,8 @@ from RL_brain_3 import PolicyGradientAgent
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--learning_rate', type=float, default=1e-3, help='learning rate')
+parser.add_argument('--learning_rate', type=float, default=2e-2, help='learning rate')
+parser.add_argument('--GAMMA', type=float, default=0.9999,)
 parser.add_argument('--episode', type=int, default=350)
 parser.add_argument('--n_episode', type=int, default=1000)
 parser.add_argument('--opt', default='SGLD')
@@ -102,6 +103,7 @@ h_speed=args.h_speed
 sfile=args.fileseeker
 hfile=args.filehider
 vlag=args.vlag
+GAMMA=args.GAMMA
 
 kwargs.update({
     'n_agents': n_agents,
@@ -124,46 +126,38 @@ env.reset()
 #env_viewer = EnvViewer(env)
 
 
-rhlist=[]
-rslist=[]
 
 def main(sk=None,hd=None,vlag=0):
+    rhlist = []
+    rslist = []
 
     Seeker=sk
     Hider=hd
 
     if Seeker == None:
-        Seeker = PolicyGradientAgent(lr, [8], n_actions=9, layer1_size=20, layer2_size=10,opt=opt,seed=seed)
+        Seeker = PolicyGradientAgent(lr, [8], n_actions=9, layer1_size=20, layer2_size=10,opt=opt,seed=seed,GAMMA=GAMMA)
     if Hider == None:
-        Hider = PolicyGradientAgent(lr, [8], n_actions=9, layer1_size=20, layer2_size=10,opt=opt,seed=seed+12345)
+        Hider = PolicyGradientAgent(lr, [8], n_actions=9, layer1_size=20, layer2_size=10,opt=opt,seed=seed+12345, GAMMA=GAMMA)
 
-    rs = []
-    rh = []
     for ii in range(n_episode):
-        # env_viewer.env_reset()
         env.reset()
         sampleaction = np.array([[5, 5, 5], [5, 5, 5]])
         action = {'action_movement': sampleaction}
 
-        # obs, rew, down, _ = env_viewer.step(action)
         obs, rew, down, _ = env.step(action)
         observation = np.array(
             [obs['observation_self'][0][0], obs['observation_self'][0][1], obs['observation_self'][0][4],
              obs['observation_self'][0][5], obs['observation_self'][1][0], obs['observation_self'][1][1],
              obs['observation_self'][1][4], obs['observation_self'][1][5]])
-        # observation = np.array([obs['observation_self'][1][0], obs['observation_self'][1][1],obs['observation_self'][1][4],obs['observation_self'][1][5]])
 
         for i in range(episode):
             action_Seeker = Seeker.choose_action(observation)
             action_Hider = Hider.choose_action(observation)
-            # print(action_Seeker)
 
             if np.random.rand() > 0.95:
                 action_Hider = np.random.randint(9)
             h1 = (action_Hider // 3 - 1) * h_speed + 5
             h2 = (action_Hider % 3 - 1) * h_speed + 5
-            #h1,h2=5,5
-            #print(action)
 
             if np.random.rand()>0.95:
                 action_Seeker=np.random.randint(9)
@@ -177,35 +171,27 @@ def main(sk=None,hd=None,vlag=0):
 
 
             ac = {'action_movement': np.array([[h1, h2, 5], [s1, s2, 5]])}
-            #print(ac)
-            #obs_, reward, done, info = env_viewer.step(ac, show=False)
+
             obs_, reward, done, info = env.step(ac)
             observation_ = np.array([obs_['observation_self'][0][0], obs_['observation_self'][0][1],obs_['observation_self'][0][4], obs_['observation_self'][0][5],obs_['observation_self'][1][0], obs_['observation_self'][1][1], obs_['observation_self'][1][4], obs_['observation_self'][1][5]])
 
-
-           # if not obs_['mask_aa_obs'][1][0]:
-            #    rew= 5.0-( np.sqrt((observation_[4] - observation_[0]) ** 2 + (observation_[5] - observation_[1]) ** 2)*5)
-            #else:
-            #    rew= 5.0-( np.sqrt((observation_[4] - observation_[0]) ** 2 + (observation_[5] - observation_[1]) ** 2)*5)
             rew=1.0/np.sqrt((observation_[4] - observation_[0]) ** 2 + (observation_[5] - observation_[1]) ** 2)*5-3
-            #print(observation_)
 
-            #rrew=3-edge_punish(observation_[0],observation_[1])
-            #print(observation_[0],observation_[1])
-            #Seeker.store_transition(observation[-4:], action_Seeker, +rew)
             Seeker.store_rewards(rew-edge_punish(observation_[4],observation_[5]))
             Hider.store_rewards(-rew-edge_punish(observation_[0],observation_[1]))
-            #print(-rrew)
-            #Hider.store_transition(observation[4:], action_Hider, rrew)
 
-            #print(50-edge_punish(observation_[0],observation_[1]))
             observation = observation_
         print(ii)
-        #print(np.mean(Seeker.reward_memory[0]))
-        #rs.append(np.mean(Seeker.reward_memory))
-        #rh.append(np.mean(Hider.reward_memory))
-        rhlist.append(Hider.reward_memory)
-        rslist.append(Seeker.reward_memory)
+
+        Gh=0
+        Gs=0
+        for i in reversed(range(episode)):
+            Gh=Gh*GAMMA+Hider.reward_memory[i]
+            Gs = Gs * GAMMA + Seeker.reward_memory[i]
+
+
+        rhlist.append(Gh)
+        rslist.append(Gs)
         if vlag == 0:
             Hider.learn()
             Seeker.learn()
