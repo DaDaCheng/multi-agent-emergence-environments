@@ -137,9 +137,9 @@ def main(sk=None,hd=None,vlag=0):
     Hider=hd
 
     if Seeker == None:
-        Seeker = PolicyGradientAgent(lr, [8], n_actions=9, layer1_size=64, layer2_size=32,opt=opt,seed=seed,GAMMA=GAMMA)
+        Seeker = PolicyGradientAgent(lr, [8], n_actions=9, layer1_size=8, layer2_size=4,opt=opt,seed=seed,GAMMA=GAMMA)
     if Hider == None:
-        Hider = PolicyGradientAgent(lr, [8], n_actions=9, layer1_size=64, layer2_size=32,opt=opt,seed=seed+12345, GAMMA=GAMMA)
+        Hider = PolicyGradientAgent(lr, [8], n_actions=9, layer1_size=8, layer2_size=4,opt=opt,seed=seed+12345, GAMMA=GAMMA)
 
     for ii in range(n_episode):
         if display:
@@ -159,12 +159,12 @@ def main(sk=None,hd=None,vlag=0):
             action_Seeker = Seeker.choose_action(observation)
             action_Hider = Hider.choose_action(observation)
 
-            if np.random.rand() > 0.95:
+            if np.random.rand() > 1:
                 action_Hider = np.random.randint(9)
             h1 = (action_Hider // 3 - 1) * h_speed + 5
             h2 = (action_Hider % 3 - 1) * h_speed + 5
 
-            if np.random.rand()>0.95:
+            if np.random.rand() > 1:
                 action_Seeker=np.random.randint(9)
             s1=(action_Seeker//3-1)*s_speed+5
             s2=(action_Seeker%3-1)*s_speed+5
@@ -175,17 +175,18 @@ def main(sk=None,hd=None,vlag=0):
 
 
             ac = {'action_movement': np.array([[h1, h2, 5], [s1, s2, 5]])}
+            #ac = {'action_movement': np.array([[5, 5, 5], [s1, s2, 5]])}
 
             obs_, reward, done, info = env.step(ac)
             observation_ = np.array([obs_['observation_self'][0][0], obs_['observation_self'][0][1],obs_['observation_self'][0][4], obs_['observation_self'][0][5],obs_['observation_self'][1][0], obs_['observation_self'][1][1], obs_['observation_self'][1][4], obs_['observation_self'][1][5]])
 
-            rew=1.0/np.sqrt((observation_[4] - observation_[0]) ** 2 + (observation_[5] - observation_[1]) ** 2)*5-3
+            rew=1.0/np.sqrt((observation_[4] - observation_[0]) ** 2 + (observation_[5] - observation_[1]) ** 2)
 
-            Seeker.store_rewards(rew-edge_punish(observation_[4],observation_[5]))
-            Hider.store_rewards(-rew-edge_punish(observation_[0],observation_[1]))
+            Seeker.store_rewards(rew)
+            Hider.store_rewards(-rew)
 
             observation = observation_
-        print(ii)
+        #print(ii)
 
         Gh=0
         Gs=0

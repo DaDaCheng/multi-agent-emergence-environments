@@ -76,9 +76,9 @@ class PolicyGradientAgent(object):
                 G_sum += self.reward_memory[k] * discount
                 discount *= self.gamma
             G[t] = G_sum
-        mean = np.mean(G)
-        std = np.std(G) if np.std(G) > 0 else 1
-        G = (G - mean) / std
+        #mean = np.mean(G)
+        #std = np.std(G) if np.std(G) > 0 else 1
+        #G = (G - mean) / std
 
         G = T.tensor(G, dtype=T.float).to(self.policy.device)
         loss = 0
