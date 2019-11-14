@@ -187,6 +187,7 @@ def main(sk=None,hd=None,vlag=0):
 
             observation = observation_
         #print(ii)
+        print('\r{}'.format(ii), end='')
 
         Gh=0
         Gs=0
@@ -195,8 +196,12 @@ def main(sk=None,hd=None,vlag=0):
             Gs = Gs * GAMMA + Seeker.reward_memory[i]
 
 
-        rhlist.append(Gh)
-        rslist.append(Gs)
+        #rhlist.append(Gh)
+        #rslist.append(Gs)
+
+        rhlist.append(Hider.reward_memory)
+        rslist.append(Seeker.reward_memory)
+
         if vlag == 0:
             Hider.learn()
             Seeker.learn()
@@ -210,8 +215,8 @@ def main(sk=None,hd=None,vlag=0):
     #np.save('~/Downloads/'+out+'.npy', a)
     #rhlist.append(rh)
     #rslist.append(rs)
-    np.save('output/'+opt+'_h_'+out + '.npy', rhlist)
-    np.save('output/'+opt+'_s_'+out + '.npy', rslist)
+    np.save('output/'+'h_'+out + '.npy', rhlist)
+    np.save('output/'+'s_'+out + '.npy', rslist)
     # print(ii,R)
     return Seeker, Hider
 

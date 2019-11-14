@@ -15,3 +15,6 @@ simphas/playmf.py --n_episode 200 --h_speed $1 --s_speed 4 --out $2vh --vlag 3  
 # Hider
 #simphas/playmf.py --n_episode 200 --h_speed 4 --s_speed $1 --out $2vs --vlag 3 --fileseeker policys_base$3Adma5.pkl --filehider policyh_base4$4$5.pkl
 source deactivate
+
+
+#simphas/playmf.py --n_episode 1000 --h_speed 1 --s_speed 1 --out SGLD_s_1 --vlag 3 --fileseeker policys_SGLDspeed1.pkl --filehider policyh_Admaspeed1.pkl
