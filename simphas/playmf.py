@@ -87,7 +87,7 @@ def game_rew(n,n_seekers, dism, matm, thr=1.0):
 
 env_name = 'mae_envs/envs/mybase.py'
 
-display = True
+display = False
 n_agents= args.n_agents
 n_seekers=args.n_seekers
 n_hiders=args.n_hiders
@@ -181,7 +181,7 @@ def main(sk=None,hd=None,vlag=0):
             observation_ = np.array([obs_['observation_self'][0][0], obs_['observation_self'][0][1],obs_['observation_self'][0][4], obs_['observation_self'][0][5],obs_['observation_self'][1][0], obs_['observation_self'][1][1], obs_['observation_self'][1][4], obs_['observation_self'][1][5]])
 
             rew=1.0/np.sqrt((observation_[4] - observation_[0]) ** 2 + (observation_[5] - observation_[1]) ** 2)
-
+            #print(rew)
             Seeker.store_rewards(rew)
             Hider.store_rewards(-rew)
 
@@ -215,8 +215,8 @@ def main(sk=None,hd=None,vlag=0):
     #np.save('~/Downloads/'+out+'.npy', a)
     #rhlist.append(rh)
     #rslist.append(rs)
-    np.save('output/'+'h_'+out + '.npy', rhlist)
-    np.save('output/'+'s_'+out + '.npy', rslist)
+    np.save('output100/'+'h_'+out + '.npy', rhlist)
+    np.save('output100/'+'s_'+out + '.npy', rslist)
     # print(ii,R)
     return Seeker, Hider
 

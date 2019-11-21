@@ -1,20 +1,17 @@
 #!/bin/bash
-#
-#
-#SBATCH --output=res.txt
-#
-#SBATCH --ntasks=1
-#SBATCH --time=30:30:30
-
-source activate tf
-# seeker
-#./simphas/playmf.py --n_episode 1000 --h_speed $1 --s_speed 1 --out vs --vlag 3 --fileseeker $2.pkl --filehider $3.pkl
-simphas/playmf.py --n_episode 200 --h_speed $1 --s_speed 4 --out $2vh --vlag 3   --filehider policyh_base$3Adma5.pkl  --fileseeker policys_base4$4$5.pkl
+for i in $1
+do
+        ./simphas/playmf.py --n_episode 1000 --h_speed 1 --s_speed 1 --opt SGLD --seeds $i --out SGLD_speed1_$1 --vlag 0 --episode 400 --GAMMA 0.99 --learning_rate 0.001
+        #sbatch ./simphas/playmf.py --n_episode 1000 --h_speed 1 --s_speed 1 --opt SGLD --seeds $i --out SGLD_speed1_$1 --vlag 0 --episode 400 --GAMMA 0.99 --learning_rate 0.001
+        #sbatch ./simphas/playmf.py --n_episode 1000 --h_speed 1 --s_speed 1 --opt SGLD --seeds $i --out SGLD_speed1_$1 --vlag 0 --episode 400 --GAMMA 0.99 --learning_rate 0.001
+        #sbatch ./simphas/playmf.py --n_episode 1000 --h_speed 1 --s_speed 1 --opt SGLD --seeds $i --out SGLD_speed1_$1 --vlag 0 --episode 400 --GAMMA 0.99 --learning_rate 0.001
 
 
-# Hider
-#simphas/playmf.py --n_episode 200 --h_speed 4 --s_speed $1 --out $2vs --vlag 3 --fileseeker policys_base$3Adma5.pkl --filehider policyh_base4$4$5.pkl
-source deactivate
+        ./simphas/playmf.py --n_episode 1000 --h_speed 1 --s_speed 1 --opt RMSprop --seeds $i --out RMSprop_speed1_$1 --vlag 0 --episode 400 --GAMMA 0.99 --learning_rate 0.001
+        #sbatch ./simphas/playmf.py --n_episode 1000 --h_speed 1 --s_speed 1 --opt RMSprop --seeds $i --out RMSprop_speed1_$1 --vlag 0 --episode 400 --GAMMA 0.99 --learning_rate 0.001
+        #sbatch ./simphas/playmf.py --n_episode 1000 --h_speed 1 --s_speed 1 --opt RMSprop --seeds $i --out RMSprop_speed1_$1 --vlag 0 --episode 400 --GAMMA 0.99 --learning_rate 0.001
+        #sbatch ./simphas/playmf.py --n_episode 1000 --h_speed 1 --s_speed 1 --opt RMSprop --seeds $i --out RMSprop_speed1_$1 --vlag 0 --episode 400 --GAMMA 0.99 --learning_rate 0.001
 
 
-#simphas/playmf.py --n_episode 1000 --h_speed 1 --s_speed 1 --out SGLD_s_1 --vlag 3 --fileseeker policys_SGLDspeed1.pkl --filehider policyh_Admaspeed1.pkl
+
+done
