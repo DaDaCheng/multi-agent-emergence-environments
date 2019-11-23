@@ -7,7 +7,7 @@ do
   do
     for k in {1..12}
     do
-      sbatch basepolicy.sh $i $i --opt $j --seeds $k --out $j_s$i_$k
+      sbatch basepolicy.sh $i $i $j $k $j_s$i_$k
     done
 
   done
@@ -20,7 +20,7 @@ do
   do
     for k in 1 2
     do
-     sbatch basepolicy.sh $i $i --opt $j --seeds $k --out $j_s$i_$k
+     sbatch basepolicy.sh $i $i $j $k $j_s$i_$k
     done
 
   done
