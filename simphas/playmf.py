@@ -88,7 +88,7 @@ def game_rew(n,n_seekers, dism, matm, thr=1.0):
 
 env_name = 'mae_envs/envs/mybase.py'
 
-display = True
+display = False
 n_agents= args.n_agents
 n_seekers=args.n_seekers
 n_hiders=args.n_hiders
@@ -129,6 +129,7 @@ if display:
     env = EnvViewer(env)
     env.env_reset()
 
+print(out)
 
 
 def main(sk=None,hd=None,vlag=0):
