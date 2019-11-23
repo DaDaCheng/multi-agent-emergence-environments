@@ -7,7 +7,7 @@ do
   do
     for k in {1..20}
     do
-      sbatch basepolicy.sh $i $i $j $k $j $i $k
+      sbatch baseog.sh $i $i $j $k $j $i $k
     done
 
   done
@@ -20,7 +20,7 @@ do
   do
     for k in 1 2 3 4
     do
-     sbatch basepolicy.sh $i $i $j $k $j $i $k
+     sbatch baseog.sh $i $i $j $k $j $i $k
     done
 
   done
