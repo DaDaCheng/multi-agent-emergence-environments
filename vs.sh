@@ -1,17 +1,8 @@
 #!/bin/bash
-for i in $1
-do
-        ./simphas/playmf.py --n_episode 1000 --h_speed 1 --s_speed 1 --opt SGLD --seeds $i --out SGLD_speed1_$1 --vlag 0 --episode 400 --GAMMA 0.99 --learning_rate 0.001
-        #sbatch ./simphas/playmf.py --n_episode 1000 --h_speed 1 --s_speed 1 --opt SGLD --seeds $i --out SGLD_speed1_$1 --vlag 0 --episode 400 --GAMMA 0.99 --learning_rate 0.001
-        #sbatch ./simphas/playmf.py --n_episode 1000 --h_speed 1 --s_speed 1 --opt SGLD --seeds $i --out SGLD_speed1_$1 --vlag 0 --episode 400 --GAMMA 0.99 --learning_rate 0.001
-        #sbatch ./simphas/playmf.py --n_episode 1000 --h_speed 1 --s_speed 1 --opt SGLD --seeds $i --out SGLD_speed1_$1 --vlag 0 --episode 400 --GAMMA 0.99 --learning_rate 0.001
+#SBATCH --output=res.txt
+#SBATCH --ntasks=1
+#SBATCH --time=99:99:99
 
-
-        ./simphas/playmf.py --n_episode 1000 --h_speed 1 --s_speed 1 --opt RMSprop --seeds $i --out RMSprop_speed1_$1 --vlag 0 --episode 400 --GAMMA 0.99 --learning_rate 0.001
-        #sbatch ./simphas/playmf.py --n_episode 1000 --h_speed 1 --s_speed 1 --opt RMSprop --seeds $i --out RMSprop_speed1_$1 --vlag 0 --episode 400 --GAMMA 0.99 --learning_rate 0.001
-        #sbatch ./simphas/playmf.py --n_episode 1000 --h_speed 1 --s_speed 1 --opt RMSprop --seeds $i --out RMSprop_speed1_$1 --vlag 0 --episode 400 --GAMMA 0.99 --learning_rate 0.001
-        #sbatch ./simphas/playmf.py --n_episode 1000 --h_speed 1 --s_speed 1 --opt RMSprop --seeds $i --out RMSprop_speed1_$1 --vlag 0 --episode 400 --GAMMA 0.99 --learning_rate 0.001
-
-
-
-done
+source activate tf
+./simphas/playmf.py --n_episode 500 --h_speed 3 --s_speed $1 --vlag 3 --out $2_$3_$4 --fileseeker policy_s_RMSprop_3_9.pkl --filehider policy_h_$5_3_$6.pkl --outflag 10
+source deactivate
