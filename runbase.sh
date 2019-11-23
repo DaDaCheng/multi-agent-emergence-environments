@@ -1,17 +1,19 @@
 #!/bin/bash
 
 
-for i in 1
+#!/bin/bash
+
+for i in 1 4
 do
   for j in SGLD RMSprop
   do
-    for k in {1..50}
+    for k in {1..10}
     do
-        sbatch ./basepolicy.sh $i $i $j $k base$i$j$k
-
+      sbatch ./simphas/playmf.py $i $i --opt $j --seeds $k --out $j_s$i_$k
     done
-  done
 
+  done
+done
 
 done
 
@@ -19,12 +21,10 @@ for i in 1 2 3 4
 do
   for j in Adma
   do
-    for k in {5..8}
+    for k in {1..10}
     do
-      sbatch ./basepolicy.sh $i $i $j $k base$i$j$k
-
+     sbatch ./simphas/playmf.py $i $i --opt $j --seeds $k --out $j_s$i_$k
     done
+
   done
-
-
 done

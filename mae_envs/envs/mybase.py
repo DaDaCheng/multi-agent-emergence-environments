@@ -29,7 +29,7 @@ class Base(Env):
             deterministic_mode (bool): if True, seeds are incremented rather than randomly sampled.
     '''
     def __init__(self, horizon=250, n_substeps=5, n_agents=2,
-                 floor_size=1.5, grid_size=30,
+                 floor_size=3, grid_size=30,
                  action_lims=(-1.0, 1.0), deterministic_mode=False, start_seed=None,
                  **kwargs):
         super().__init__(get_sim=self._get_sim,

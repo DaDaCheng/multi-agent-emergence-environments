@@ -28,10 +28,10 @@ from RL_brain_3 import PolicyGradientAgent
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--learning_rate', type=float, default=1e-2, help='learning rate')
-parser.add_argument('--GAMMA', type=float, default=0.99,)
+parser.add_argument('--learning_rate', type=float, default=1e-3, help='learning rate')
+parser.add_argument('--GAMMA', type=float, default=0.999,)
 parser.add_argument('--episode', type=int, default=350)
-parser.add_argument('--n_episode', type=int, default=1000)
+parser.add_argument('--n_episode', type=int, default=100000)
 parser.add_argument('--opt', default='SGLD')
 parser.add_argument('--n_hiders', type=int, default=1)
 parser.add_argument('--n_seekers', type=int, default=1)
@@ -42,6 +42,7 @@ parser.add_argument('--s_speed', type=int, default=1)
 parser.add_argument('--h_speed', type=int, default=1)
 parser.add_argument('--fileseeker', default='policy.pkl')
 parser.add_argument('--filehider', default='policy.pkl')
+parser.add_argument('--outflag', default=0)
 parser.add_argument('--vlag',type=int, default=0)
 args = parser.parse_args()
 
@@ -87,7 +88,7 @@ def game_rew(n,n_seekers, dism, matm, thr=1.0):
 
 env_name = 'mae_envs/envs/mybase.py'
 
-display = False
+display = True
 n_agents= args.n_agents
 n_seekers=args.n_seekers
 n_hiders=args.n_hiders
@@ -98,6 +99,7 @@ seed=args.seeds
 opt=args.opt
 lr=args.learning_rate
 out=args.out
+outflag=args.outflag
 s_speed=args.s_speed
 h_speed=args.h_speed
 sfile=args.fileseeker
@@ -137,9 +139,9 @@ def main(sk=None,hd=None,vlag=0):
     Hider=hd
 
     if Seeker == None:
-        Seeker = PolicyGradientAgent(lr, [8], n_actions=9, layer1_size=8, layer2_size=4,opt=opt,seed=seed,GAMMA=GAMMA)
+        Seeker = PolicyGradientAgent(lr, [8], n_actions=9, layer1_size=64, layer2_size=64,opt=opt,seed=seed,GAMMA=GAMMA)
     if Hider == None:
-        Hider = PolicyGradientAgent(lr, [8], n_actions=9, layer1_size=8, layer2_size=4,opt=opt,seed=seed+12345, GAMMA=GAMMA)
+        Hider = PolicyGradientAgent(lr, [8], n_actions=9, layer1_size=64, layer2_size=64,opt=opt,seed=seed+12345, GAMMA=GAMMA)
 
     for ii in range(n_episode):
         if display:
@@ -180,20 +182,22 @@ def main(sk=None,hd=None,vlag=0):
             obs_, reward, done, info = env.step(ac)
             observation_ = np.array([obs_['observation_self'][0][0], obs_['observation_self'][0][1],obs_['observation_self'][0][4], obs_['observation_self'][0][5],obs_['observation_self'][1][0], obs_['observation_self'][1][1], obs_['observation_self'][1][4], obs_['observation_self'][1][5]])
 
-            rew=1.0/np.sqrt((observation_[4] - observation_[0]) ** 2 + (observation_[5] - observation_[1]) ** 2)
+            rew1=np.sqrt((observation_[4] - observation_[0]) ** 2 + (observation_[5] - observation_[1]) ** 2)
+            rew2=np.sqrt((observation_[0] -1.5) ** 2 + (observation_[1] - 1.5) ** 2)*5
+
             #print(rew)
-            Seeker.store_rewards(rew)
-            Hider.store_rewards(-rew)
+            Seeker.store_rewards(-rew)
+            Hider.store_rewards(-rew2+rew1)
 
             observation = observation_
         #print(ii)
         print('\r{}'.format(ii), end='')
-
-        Gh=0
-        Gs=0
-        for i in reversed(range(episode)):
-            Gh=Gh*GAMMA+Hider.reward_memory[i]
-            Gs = Gs * GAMMA + Seeker.reward_memory[i]
+        if outflag > 0:
+            Gh=0
+            Gs=0
+            for i in reversed(range(episode)):
+                Gh=Gh*GAMMA+Hider.reward_memory[i]
+                Gs = Gs * GAMMA + Seeker.reward_memory[i]
 
 
         #rhlist.append(Gh)
@@ -206,17 +210,19 @@ def main(sk=None,hd=None,vlag=0):
             Hider.learn()
             Seeker.learn()
         else:
-            Seeker.reward_memory = []
-            Seeker.action_memory = []
-            Hider.reward_memory = []
-            Hider.action_memory = []
+            if outflag > 0:
+                Seeker.reward_memory = []
+                Seeker.action_memory = []
+                Hider.reward_memory = []
+                Hider.action_memory = []
 
 
     #np.save('~/Downloads/'+out+'.npy', a)
     #rhlist.append(rh)
     #rslist.append(rs)
-    np.save('output100/'+'h_'+out + '.npy', rhlist)
-    np.save('output100/'+'s_'+out + '.npy', rslist)
+    if outflag > 0:
+        np.save('output/'+'h_'+out + '.npy', rhlist)
+        np.save('output/'+'s_'+out + '.npy', rslist)
     # print(ii,R)
     return Seeker, Hider
 
@@ -248,11 +254,11 @@ if __name__ == '__main__':
 
     S1, H1 = main(sk,hd)
     if vlag==0:
-        pickle_file = open('policys_'+out+'.pkl', 'wb')
+        pickle_file = open('policy_s_'+out+'.pkl', 'wb')
         pickle.dump(S1, pickle_file)
         pickle_file.close()
 
-        pickle_file = open('policyh_' + out + '.pkl', 'wb')
+        pickle_file = open('policy_h_' + out + '.pkl', 'wb')
         pickle.dump(H1, pickle_file)
         pickle_file.close()
 
