@@ -31,7 +31,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--learning_rate', type=float, default=1e-3, help='learning rate')
 parser.add_argument('--GAMMA', type=float, default=0.999,)
 parser.add_argument('--episode', type=int, default=350)
-parser.add_argument('--n_episode', type=int, default=100000)
+parser.add_argument('--n_episode', type=int, default=50000)
 parser.add_argument('--opt', default='SGLD')
 parser.add_argument('--n_hiders', type=int, default=1)
 parser.add_argument('--n_seekers', type=int, default=1)
@@ -42,7 +42,7 @@ parser.add_argument('--s_speed', type=int, default=1)
 parser.add_argument('--h_speed', type=int, default=1)
 parser.add_argument('--fileseeker', default='policy.pkl')
 parser.add_argument('--filehider', default='policy.pkl')
-parser.add_argument('--outflag', default=0)
+parser.add_argument('--outflag',type=int, default=0)
 parser.add_argument('--vlag',type=int, default=0)
 args = parser.parse_args()
 
@@ -186,7 +186,7 @@ def main(sk=None,hd=None,vlag=0):
             rew2=np.sqrt((observation_[0] -1.5) ** 2 + (observation_[1] - 1.5) ** 2)*5
 
             #print(rew)
-            Seeker.store_rewards(-rew)
+            Seeker.store_rewards(-rew1)
             Hider.store_rewards(-rew2+rew1)
 
             observation = observation_
@@ -199,22 +199,21 @@ def main(sk=None,hd=None,vlag=0):
                 Gh=Gh*GAMMA+Hider.reward_memory[i]
                 Gs = Gs * GAMMA + Seeker.reward_memory[i]
 
-
-        #rhlist.append(Gh)
-        #rslist.append(Gs)
-
-        rhlist.append(Hider.reward_memory)
-        rslist.append(Seeker.reward_memory)
+            if  outflag>3:
+                rhlist.append(Gh)
+                rslist.append(Gs)
+            else:
+                rhlist.append(Hider.reward_memory)
+                rslist.append(Seeker.reward_memory)
 
         if vlag == 0:
             Hider.learn()
             Seeker.learn()
         else:
-            if outflag > 0:
-                Seeker.reward_memory = []
-                Seeker.action_memory = []
-                Hider.reward_memory = []
-                Hider.action_memory = []
+            Seeker.reward_memory = []
+            Seeker.action_memory = []
+            Hider.reward_memory = []
+            Hider.action_memory = []
 
 
     #np.save('~/Downloads/'+out+'.npy', a)
